@@ -67,7 +67,7 @@ export default function SignupPage() {
 
       login(user);
       router.push('/');
-    } catch (err) {
+    } catch {
       setError('Signup failed. Please try again.');
     } finally {
       setIsLoading(false);

@@ -11,7 +11,6 @@ import {
   Phone, 
   Droplets, 
   Calendar, 
-  Settings, 
   LogOut,
   Shield,
   Users,
@@ -21,6 +20,7 @@ import {
   X
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 
 export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState<TabType>('profile');
@@ -42,6 +42,17 @@ export default function ProfilePage() {
     }
   }, [isAuthenticated, isLoading, router]);
 
+  useEffect(() => {
+    if (user) {
+      setEditData({
+        name: user.name,
+        phone: user.phone,
+        bloodGroup: user.bloodGroup,
+        dateOfBirth: user.dateOfBirth,
+      });
+    }
+  }, [user]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -58,17 +69,6 @@ export default function ProfilePage() {
   }
 
   const emergencyContacts = getEmergencyContacts();
-
-  React.useEffect(() => {
-    if (user) {
-      setEditData({
-        name: user.name,
-        phone: user.phone,
-        bloodGroup: user.bloodGroup,
-        dateOfBirth: user.dateOfBirth,
-      });
-    }
-  }, [user]);
 
   const handleEdit = () => {
     setIsEditing(true);
@@ -312,3 +312,4 @@ export default function ProfilePage() {
     </AppLayout>
   );
 }
+

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import  Image from 'next/image';  
 import { useAuth } from '@/contexts/AuthContext';
 import AppLayout from '@/components/AppLayout';
 import { TabType, Article } from '@/types';
@@ -17,33 +18,11 @@ import { useRouter } from 'next/navigation';
 
 export default function ArticlesPage() {
   const [activeTab, setActiveTab] = useState<TabType>('articles');
-  const { isAuthenticated, isLoading } = useAuth();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.push('/login');
-    }
-  }, [isAuthenticated, isLoading, router]);
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="spinner mx-auto mb-4" />
-          <p className="text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!isAuthenticated) {
-    return null;
-  }
-
   const [articles, setArticles] = useState<Article[]>([]);
   const [isLoadingArticles, setIsLoadingArticles] = useState(true);
   const [error, setError] = useState('');
+  const { isAuthenticated, isLoading } = useAuth();
+  const router = useRouter();
 
   const loadArticles = async () => {
     setIsLoadingArticles(true);
@@ -61,8 +40,29 @@ export default function ArticlesPage() {
   };
 
   useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      router.push('/login');
+    }
+  }, [isAuthenticated, isLoading, router]);
+
+  useEffect(() => {
     loadArticles();
   }, []);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="spinner mx-auto mb-4" />
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return null;
+  }
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -85,7 +85,7 @@ export default function ArticlesPage() {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-2xl font-bold text-gray-900">Safety Articles</h2>
-            <p className="text-gray-600">Stay informed about women's safety</p>
+            <p className="text-gray-600">Stay informed about women&apos;s safety</p>
           </div>
           <button
             onClick={loadArticles}
@@ -148,9 +148,11 @@ export default function ArticlesPage() {
                   <div className="flex-shrink-0">
                     <div className="w-20 h-20 bg-gray-200 rounded-lg overflow-hidden">
                       {article.urlToImage ? (
-                        <img
+                        <Image
                           src={article.urlToImage}
                           alt={article.title}
+                          width={80}
+                          height={80}
                           className="w-full h-full object-cover"
                           onError={(e) => {
                             e.currentTarget.style.display = 'none';

@@ -12,8 +12,6 @@ import {
   Phone, 
   User, 
   Heart, 
-  X,
-  Check,
   AlertTriangle,
   Users
 } from 'lucide-react';
@@ -23,6 +21,15 @@ export default function ContactsPage() {
   const [activeTab, setActiveTab] = useState<TabType>('contacts');
   const { isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [editingContact, setEditingContact] = useState<TrustedContact | null>(null);
+  const [formData, setFormData] = useState({
+    name: '',
+    phone: '',
+    relationship: '',
+    isEmergency: false,
+  });
+  const { contacts, addContact, updateContact, deleteContact } = useContacts();
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -44,17 +51,6 @@ export default function ContactsPage() {
   if (!isAuthenticated) {
     return null;
   }
-
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [editingContact, setEditingContact] = useState<TrustedContact | null>(null);
-  const [formData, setFormData] = useState({
-    name: '',
-    phone: '',
-    relationship: '',
-    isEmergency: false,
-  });
-
-  const { contacts, addContact, updateContact, deleteContact } = useContacts();
 
   const handleAddContact = () => {
     setFormData({
