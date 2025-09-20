@@ -3,8 +3,7 @@ import { generateGoogleMapsLink } from './location';
 
 export const generateSOSMessage = (
   user: User,
-  location: LocationData,
-  contacts: TrustedContact[]
+  location: LocationData
 ): string => {
   const mapsLink = generateGoogleMapsLink(location.latitude, location.longitude);
   const locationText = location.address || `${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`;
@@ -51,7 +50,7 @@ export const shareToAllContacts = (
   location: LocationData,
   contacts: TrustedContact[]
 ): void => {
-  const message = generateSOSMessage(user, location, contacts);
+  const message = generateSOSMessage(user, location);
   const phoneNumbers = contacts
     .filter(contact => contact.isEmergency)
     .map(contact => contact.phone);

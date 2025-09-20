@@ -20,7 +20,14 @@ export const fetchWomenSafetyNews = async (): Promise<Article[]> => {
       throw new Error(`News API error: ${data.message}`);
     }
 
-    return data.articles.map((article: any, index: number) => ({
+    return data.articles.map((article: {
+      title?: string;
+      description?: string;
+      url?: string;
+      urlToImage?: string;
+      publishedAt?: string;
+      source?: { name?: string };
+    }, index: number) => ({
       id: `article-${index}`,
       title: article.title || 'No title available',
       description: article.description || 'No description available',

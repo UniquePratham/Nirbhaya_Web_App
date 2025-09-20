@@ -23,7 +23,7 @@ export const getCurrentLocation = (): Promise<LocationData> => {
             longitude,
             address,
           });
-        } catch (error) {
+        } catch {
           // If address lookup fails, still return coordinates
           resolve({
             latitude,
