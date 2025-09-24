@@ -34,7 +34,8 @@ import {
   Clock,
   UserCheck,
   Play,
-  ChevronRight
+  ChevronRight,
+  Menu
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -52,6 +53,7 @@ const LandingPage = () => {
   // removed hoveredFeature hover state (replaced with CSS-only hover effects)
   const [showSpeechBubble, setShowSpeechBubble] = useState(false);
   const [currentMessage, setCurrentMessage] = useState('');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Array of praising messages for Nirbhaya
   const praisingMessages = [
@@ -150,6 +152,7 @@ const LandingPage = () => {
       <nav className="sticky top-0 z-50 backdrop-blur-lg border-b" style={{ background: 'var(--surface-elevated)', borderColor: 'var(--border-light)' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
+            {/* Logo */}
             <div 
               className="flex items-center space-x-1 cursor-pointer hover:scale-105 transition-all duration-300" 
               onClick={() => router.push('/')}
@@ -158,6 +161,7 @@ const LandingPage = () => {
               <span className="text-2xl font-black text-primary">Nirbhaya</span>
             </div>
 
+            {/* Desktop Navigation Links */}
             <div className="hidden md:flex items-center space-x-8">
               <a href="#features" className="relative font-medium transition-colors duration-300 group" style={{ color: 'var(--text-secondary)' }}>
                 Features
@@ -177,7 +181,8 @@ const LandingPage = () => {
               </a>
             </div>
 
-            <div className="flex items-center space-x-4">
+            {/* Desktop Auth Buttons */}
+            <div className="hidden md:flex items-center space-x-4">
               <Button
                 onClick={() => router.push('/auth?mode=signin')}
                 variant="ghost"
@@ -188,6 +193,80 @@ const LandingPage = () => {
               <Button
                 onClick={() => router.push('/auth?mode=signup')}
                 className="btn-modern-primary text-white font-semibold px-6 py-2 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
+              >
+                Get Started
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            </div>
+
+            {/* Mobile Hamburger Button */}
+            <div className="md:hidden">
+              <button
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="inline-flex items-center justify-center p-2 rounded-md text-primary hover:text-accent hover:bg-surface-light focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary transition-all duration-300"
+              >
+                <span className="sr-only">Open main menu</span>
+                {mobileMenuOpen ? (
+                  <X className="block h-6 w-6" aria-hidden="true" />
+                ) : (
+                  <Menu className="block h-6 w-6" aria-hidden="true" />
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Mobile Menu */}
+        <div className={`md:hidden transition-all duration-300 ease-in-out overflow-hidden ${mobileMenuOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
+          <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3" style={{ background: 'var(--surface-elevated)', borderTop: '1px solid var(--border-light)' }}>
+            {/* Mobile Navigation Links */}
+            <a 
+              href="#features" 
+              className="block px-3 py-2 rounded-md text-base font-medium text-secondary hover:text-primary hover:bg-surface-light transition-all duration-300"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Features
+            </a>
+            <a 
+              href="#how-it-works" 
+              className="block px-3 py-2 rounded-md text-base font-medium text-secondary hover:text-primary hover:bg-surface-light transition-all duration-300"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              How it Works
+            </a>
+            <a 
+              href="#testimonials" 
+              className="block px-3 py-2 rounded-md text-base font-medium text-secondary hover:text-primary hover:bg-surface-light transition-all duration-300"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Testimonials
+            </a>
+            <a 
+              href="#pricing" 
+              className="block px-3 py-2 rounded-md text-base font-medium text-secondary hover:text-primary hover:bg-surface-light transition-all duration-300"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Pricing
+            </a>
+            
+            {/* Mobile Auth Buttons */}
+            <div className="pt-4 border-t border-border-light space-y-3">
+              <Button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  router.push('/auth?mode=signin');
+                }}
+                variant="ghost"
+                className="w-full text-secondary hover:text-primary font-semibold cursor-pointer hover:bg-surface-light transition-all duration-300 hover:scale-105"
+              >
+                Sign In
+              </Button>
+              <Button
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  router.push('/auth?mode=signup');
+                }}
+                className="w-full btn-modern-primary text-white font-semibold px-6 py-2 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
               >
                 Get Started
                 <ArrowRight className="w-4 h-4 ml-2" />
@@ -319,12 +398,12 @@ const LandingPage = () => {
 
                 {/* Overlay content */}
                 <div className="absolute bottom-6 left-6 right-6">
-                  <div className="bg-glass-light backdrop-blur-md rounded-2xl p-4" style={{ border: '1px solid var(--border-light)' }}>
+                  <div className="bg-white/90 backdrop-blur-lg rounded-2xl p-4 shadow-xl" style={{ border: '2px solid var(--primary)', boxShadow: '0 10px 30px rgba(0,0,0,0.2)' }}>
                     <div className="flex items-center space-x-3">
-                      <div className="w-3 h-3 bg-primary rounded-full animate-pulse"></div>
-                      <span className="text-sm font-semibold text-primary">Strong & Confident</span>
+                      <div className="w-4 h-4 rounded-full animate-pulse shadow-lg" style={{ background: 'linear-gradient(135deg, var(--primary), var(--accent))' }}></div>
+                      <span className="text-sm font-bold text-gray-800 drop-shadow-sm">Strong & Confident</span>
                     </div>
-                    <p className="text-xs text-muted mt-1">Your safety companion, always ready</p>
+                    <p className="text-xs text-gray-600 mt-1 font-medium">Your safety companion, always ready</p>
                   </div>
                 </div>
               </div>
@@ -566,7 +645,7 @@ const LandingPage = () => {
                     <span className="text-muted">24/7 support</span>
                   </li>
                 </ul>
-                <Button className="mt-10 w-full btn-secondary cursor-pointer text-white font-bold text-lg px-8 py-4 rounded-2xl shadow-lg hover:shadow-secondary/25 transition-all duration-500 hover:-translate-y-1">
+                <Button className="mt-10 xs:mt-0 w-full btn-secondary cursor-pointer text-white font-bold text-lg px-8 py-4 rounded-2xl shadow-lg hover:shadow-secondary/25 transition-all duration-500 hover:-translate-y-1">
                   Get Started Free
                 </Button>
               </div>
@@ -651,18 +730,18 @@ const LandingPage = () => {
           </div>
 
           <div className="text-center mt-16">
-            <div className="inline-flex items-center space-x-8 bg-surface-light rounded-2xl p-6">
-              <div className="flex items-center space-x-2">
-                <Shield className="w-5 h-5 text-primary" />
-                <span className="text-secondary font-semibold">30-day money back guarantee</span>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-center sm:space-x-6 lg:space-x-8 space-y-4 sm:space-y-0 bg-surface-light rounded-2xl p-4 sm:p-6 max-w-4xl mx-auto">
+              <div className="flex items-center justify-center space-x-2">
+                <Shield className="w-5 h-5 text-primary flex-shrink-0" />
+                <span className="text-secondary font-semibold text-sm sm:text-base">30-day money back guarantee</span>
               </div>
-              <div className="flex items-center space-x-2">
-                <Lock className="w-5 h-5 text-primary" />
-                <span className="text-primary font-semibold">No setup fees</span>
+              <div className="flex items-center justify-center space-x-2">
+                <Lock className="w-5 h-5 text-primary flex-shrink-0" />
+                <span className="text-primary font-semibold text-sm sm:text-base">No setup fees</span>
               </div>
-              <div className="flex items-center space-x-2">
-                <CheckCircle className="w-5 h-5 text-primary" />
-                <span className="text-primary font-semibold">Cancel anytime</span>
+              <div className="flex items-center justify-center space-x-2">
+                <CheckCircle className="w-5 h-5 text-primary flex-shrink-0" />
+                <span className="text-primary font-semibold text-sm sm:text-base">Cancel anytime</span>
               </div>
             </div>
           </div>
