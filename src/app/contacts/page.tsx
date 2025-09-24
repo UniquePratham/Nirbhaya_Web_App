@@ -33,7 +33,7 @@ export default function ContactsPage() {
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      router.push('/login');
+      router.push('/auth?mode=signin');
     }
   }, [isAuthenticated, isLoading, router]);
 

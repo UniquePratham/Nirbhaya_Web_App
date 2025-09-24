@@ -38,7 +38,7 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      router.push('/login');
+      router.push('/auth?mode=signin');
     }
   }, [isAuthenticated, isLoading, router]);
 
@@ -102,7 +102,7 @@ export default function ProfilePage() {
 
   const handleLogout = () => {
     logout();
-    router.push('/login');
+    router.push('/auth?mode=signin');
   };
 
   if (!user) {

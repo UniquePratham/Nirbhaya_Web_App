@@ -48,7 +48,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, activeTab, onTabChange 
 
   const handleLogout = () => {
     logout();
-    router.push('/login');
+    router.push('/auth?mode=signin');
   };
 
   const getGreeting = () => {
@@ -79,7 +79,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, activeTab, onTabChange 
       </div>
 
       {/* Header */}
-      <header className="relative z-40 sticky top-0">
+      <header className="z-40 sticky top-0">
         <div className="bg-white/80 backdrop-blur-xl border-b border-white/20 shadow-lg">
           <div className="container">
             <div className="flex items-center justify-between h-20">

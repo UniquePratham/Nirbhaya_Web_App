@@ -15,7 +15,12 @@ export const metadata: Metadata = {
   keywords: "women safety, emergency, SOS, safety app, Nirbhaya",
   authors: [{ name: "Nirbhaya Team" }],
   viewport: "width=device-width, initial-scale=1, maximum-scale=1",
-  themeColor: "#e91e63",
+  themeColor: "#e891c7",
+  icons: {
+    icon: "/icon.png",
+    shortcut: "/favicon.ico",
+    apple: "/apple-touch-icon.png",
+  },
 };
 
 export default function RootLayout({
