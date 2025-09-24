@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Eye, EyeOff, Shield, Heart, Users, Phone, Mail, Lock, User, Sparkles, Crown, Zap, Star, ArrowRight, ArrowLeft } from 'lucide-react';
 import Image from 'next/image';
 
-const NirbhayaAuth = () => {
+const NirbhayaAuthContent = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
   const mode = searchParams.get('mode');
@@ -734,5 +734,22 @@ const NirbhayaAuth = () => {
     </div>
   );
 };
+
+// Loading component for Suspense fallback
+const AuthPageLoading = () => (
+  <div className="h-screen w-full flex items-center justify-center" style={{ background: 'var(--background)' }}>
+    <div className="text-center">
+      <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+      <p className="text-primary font-semibold">Loading...</p>
+    </div>
+  </div>
+);
+
+// Main component wrapped with Suspense
+const NirbhayaAuth = () => (
+  <Suspense fallback={<AuthPageLoading />}>
+    <NirbhayaAuthContent />
+  </Suspense>
+);
 
 export default NirbhayaAuth;
