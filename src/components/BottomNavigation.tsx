@@ -18,32 +18,32 @@ const BottomNavigation: React.FC<BottomNavigationProps> = ({ activeTab, onTabCha
       label: 'Home',
       icon: Home,
       href: '/',
-      color: 'from-pink-500 to-red-500',
-      bgColor: 'bg-pink-50',
+      color: 'from-primary to-accent',
+      bgColor: 'bg-primary/10',
     },
     {
       id: 'contacts' as TabType,
       label: 'Contacts',
       icon: Users,
       href: '/contacts',
-      color: 'from-purple-500 to-indigo-500',
-      bgColor: 'bg-purple-50',
+      color: 'from-accent to-secondary-dark',
+      bgColor: 'bg-accent/10',
     },
     {
       id: 'articles' as TabType,
       label: 'Articles',
       icon: Newspaper,
       href: '/articles',
-      color: 'from-blue-500 to-cyan-500',
-      bgColor: 'bg-blue-50',
+      color: 'from-secondary to-tertiary',
+      bgColor: 'bg-secondary/10',
     },
     {
       id: 'profile' as TabType,
       label: 'Profile',
       icon: User,
       href: '/profile',
-      color: 'from-emerald-500 to-teal-500',
-      bgColor: 'bg-emerald-50',
+      color: 'from-tertiary to-primary',
+      bgColor: 'bg-tertiary/10',
     },
   ];
 
@@ -52,7 +52,7 @@ const BottomNavigation: React.FC<BottomNavigationProps> = ({ activeTab, onTabCha
       {/* Background with ultra-modern glass effect */}
       <div className="bg-white/80 backdrop-blur-2xl border-t border-white/30 shadow-2xl">
         {/* Gradient top border */}
-        <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-pink-500 via-purple-500 to-cyan-500" />
+        <div className="absolute top-0 left-0 right-0 h-0.5" style={{ background: 'linear-gradient(90deg, var(--primary) 0%, var(--accent) 33%, var(--secondary-dark) 66%, var(--tertiary) 100%)' }} />
         
         {/* Navigation container */}
         <div className="relative flex items-center justify-around px-6 py-3 max-w-md mx-auto">
@@ -109,8 +109,9 @@ const BottomNavigation: React.FC<BottomNavigationProps> = ({ activeTab, onTabCha
                       {Array.from({ length: 3 }).map((_, particleIndex) => (
                         <div
                           key={particleIndex}
-                          className="absolute w-1 h-1 bg-gradient-to-r from-pink-400 to-purple-400 rounded-full opacity-60"
+                          className="absolute w-1 h-1 rounded-full opacity-60"
                           style={{
+                            background: 'linear-gradient(135deg, var(--primary), var(--accent))',
                             left: `${10 + Math.random() * 80}%`,
                             top: `${10 + Math.random() * 80}%`,
                             animation: `float 2s ease-in-out infinite ${particleIndex * 0.3}s`
@@ -125,9 +126,13 @@ const BottomNavigation: React.FC<BottomNavigationProps> = ({ activeTab, onTabCha
                 <span className={cn(
                   "text-xs font-semibold mt-1.5 transition-all duration-300 tracking-wide",
                   isActive 
-                    ? "text-transparent bg-clip-text bg-gradient-to-r from-pink-600 to-purple-600 transform scale-105" 
+                    ? "text-transparent bg-clip-text transform scale-105" 
                     : "text-gray-600 group-hover:text-gray-800"
-                )}>
+                )} style={isActive ? { 
+                  background: 'linear-gradient(135deg, var(--primary), var(--accent))', 
+                  WebkitBackgroundClip: 'text', 
+                  backgroundClip: 'text' 
+                } : {}}>
                   {item.label}
                 </span>
                 
@@ -154,9 +159,9 @@ const BottomNavigation: React.FC<BottomNavigationProps> = ({ activeTab, onTabCha
         
         {/* Safety indicator */}
         <div className="absolute top-2 left-1/2 transform -translate-x-1/2 flex items-center space-x-1">
-          <Shield className="w-3 h-3 text-green-500" />
-          <div className="w-1 h-1 bg-green-500 rounded-full animate-pulse" />
-          <Heart className="w-3 h-3 text-red-500 animate-pulse" />
+          <Shield className="w-3 h-3" style={{ color: 'var(--primary)' }} />
+          <div className="w-1 h-1 rounded-full animate-pulse" style={{ background: 'var(--primary)' }} />
+          <Heart className="w-3 h-3 animate-pulse" style={{ color: 'var(--accent)' }} />
         </div>
         
         {/* Bottom safe area for newer phones */}
@@ -164,7 +169,7 @@ const BottomNavigation: React.FC<BottomNavigationProps> = ({ activeTab, onTabCha
       </div>
       
       {/* Ambient glow effect */}
-      <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-32 h-16 bg-gradient-to-t from-pink-300/20 via-purple-300/10 to-transparent blur-xl pointer-events-none" />
+      <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-32 h-16 blur-xl pointer-events-none" style={{ background: 'linear-gradient(to top, var(--primary)/20, var(--accent)/10, transparent)' }} />
     </div>
   );
 };

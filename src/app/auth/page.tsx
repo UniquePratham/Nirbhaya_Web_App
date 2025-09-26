@@ -4,10 +4,14 @@ import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Eye, EyeOff, Shield, Heart, Users, Phone, Mail, Lock, User, Sparkles, Crown, Zap, Star, ArrowRight, ArrowLeft } from 'lucide-react';
 import Image from 'next/image';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/components/ui/toast';
 
 const NirbhayaAuthContent = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { login } = useAuth();
+  const { showToast } = useToast();
   const mode = searchParams.get('mode');
   
   // Set initial state based on URL parameter, default to signup if no parameter
@@ -24,6 +28,26 @@ const NirbhayaAuthContent = () => {
       setIsSignUp(true); // Default to signup for any other case
     }
   }, [mode]);
+
+  // Initialize demo user in localStorage
+  useEffect(() => {
+    const demoEmail = 'demo@nirbhaya.com';
+    const existingDemo = localStorage.getItem(`nirbhaya_user_${demoEmail}`);
+    
+    if (!existingDemo) {
+      const demoUser = {
+        id: 'demo-user-123',
+        email: demoEmail,
+        name: 'Demo User',
+        phone: '+1234567890',
+        bloodGroup: 'O+',
+        dateOfBirth: '1990-01-01',
+        password: 'demo123'
+      };
+      
+      localStorage.setItem(`nirbhaya_user_${demoEmail}`, JSON.stringify(demoUser));
+    }
+  }, []);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -49,13 +73,138 @@ const NirbhayaAuthContent = () => {
 
   const handleSubmit = async () => {
     setIsLoading(true);
+    
+    // Simulate API call delay
     await new Promise(resolve => setTimeout(resolve, 2000));
-    setIsLoading(false);
-    if (isSignUp) {
-      alert('Account created successfully! Welcome to Nirbhaya 💖');
-    } else {
-      alert('Welcome back! You are now signed in 🌟');
+    
+    try {
+      if (isSignUp) {
+        // Validate signup form
+        if (!formData.name || !formData.email || !formData.phone || !formData.password || !formData.confirmPassword) {
+          showToast({
+            type: 'warning',
+            title: 'Missing Information',
+            message: 'Please fill in all fields to create your account.',
+            duration: 4000
+          });
+          setIsLoading(false);
+          return;
+        }
+        
+        if (formData.password !== formData.confirmPassword) {
+          showToast({
+            type: 'error',
+            title: 'Password Mismatch',
+            message: 'Passwords do not match. Please check and try again.',
+            duration: 4000
+          });
+          setIsLoading(false);
+          return;
+        }
+        
+        // Check if user already exists
+        const existingUser = localStorage.getItem(`nirbhaya_user_${formData.email}`);
+        if (existingUser) {
+          showToast({
+            type: 'warning',
+            title: 'Account Already Exists',
+            message: 'An account with this email already exists. Please sign in instead.',
+            duration: 5000
+          });
+          setIsLoading(false);
+          return;
+        }
+        
+        // Create new user
+        const newUser = {
+          id: Date.now().toString(),
+          email: formData.email,
+          name: formData.name,
+          phone: formData.phone,
+          bloodGroup: '',
+          dateOfBirth: '',
+        };
+        
+        // Store user credentials and data
+        localStorage.setItem(`nirbhaya_user_${formData.email}`, JSON.stringify({
+          ...newUser,
+          password: formData.password, // In real app, this should be hashed
+        }));
+        
+        // Login the user
+        login(newUser);
+        
+        showToast({
+          type: 'success',
+          title: 'Account Created Successfully! 🎉',
+          message: 'Welcome to Nirbhaya! Your safety journey starts now.',
+          duration: 6000
+        });
+        
+        setTimeout(() => router.push('/'), 1000);
+        
+      } else {
+        // Validate signin form
+        if (!formData.email || !formData.password) {
+          showToast({
+            type: 'warning',
+            title: 'Missing Credentials',
+            message: 'Please enter both email and password to sign in.',
+            duration: 4000
+          });
+          setIsLoading(false);
+          return;
+        }
+        
+        // Check if user exists and validate password
+        const storedUserData = localStorage.getItem(`nirbhaya_user_${formData.email}`);
+        if (!storedUserData) {
+          showToast({
+            type: 'error',
+            title: 'Account Not Found',
+            message: 'No account found with this email. Please sign up first.',
+            duration: 5000
+          });
+          setIsLoading(false);
+          return;
+        }
+        
+        const userData = JSON.parse(storedUserData);
+        if (userData.password !== formData.password) {
+          showToast({
+            type: 'error',
+            title: 'Invalid Password',
+            message: 'Incorrect password. Please check and try again.',
+            duration: 4000
+          });
+          setIsLoading(false);
+          return;
+        }
+        
+        // Login successful
+        const { password, ...userWithoutPassword } = userData;
+        login(userWithoutPassword);
+        
+        showToast({
+          type: 'success',
+          title: 'Welcome Back! 🌟',
+          message: `Hello ${userData.name}! You are now signed in securely.`,
+          duration: 5000
+        });
+        
+        setTimeout(() => router.push('/'), 1000);
+      }
+    } catch (error) {
+      console.error('Authentication error:', error);
+      showToast({
+        type: 'error',
+        title: 'Something Went Wrong',
+        message: 'An unexpected error occurred. Please try again.',
+        duration: 5000
+      });
     }
+    
+    setIsLoading(false);
   };
 
   const switchMode = () => {
@@ -501,9 +650,26 @@ const NirbhayaAuthContent = () => {
                     <span className="font-bold text-sm" style={{ color: 'var(--primary)' }}>⚡ Demo Login</span>
                     <Zap className="w-4 h-4" style={{ color: 'var(--accent)' }} />
                   </div>
-                  <p className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>
-                    🎮 Enter any email and password to explore
+                  <p className="text-xs font-medium mb-3" style={{ color: 'var(--text-secondary)' }}>
+                    📧 Email: <span className="font-bold">demo@nirbhaya.com</span><br />
+                    🔐 Password: <span className="font-bold">demo123</span>
                   </p>
+                  <button
+                    onClick={() => {
+                      setFormData({
+                        ...formData,
+                        email: 'demo@nirbhaya.com',
+                        password: 'demo123'
+                      });
+                    }}
+                    className="px-4 py-1.5 text-xs font-bold rounded-lg transition-all duration-300 hover:scale-105"
+                    style={{
+                      background: 'linear-gradient(135deg, var(--primary), var(--accent))',
+                      color: 'white'
+                    }}
+                  >
+                    🚀 Fill Demo Credentials
+                  </button>
                 </div>
               </div>
             )}

@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useContacts } from '@/contexts/ContactsContext';
 import AppLayout from '@/components/AppLayout';
 import { TabType, TrustedContact } from '@/types';
+import { useToast } from '@/components/ui/toast';
 import { 
   Plus, 
   Edit3, 
@@ -21,6 +22,7 @@ export default function ContactsPage() {
   const [activeTab, setActiveTab] = useState<TabType>('contacts');
   const { isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
+  const { showToast } = useToast();
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingContact, setEditingContact] = useState<TrustedContact | null>(null);
   const [formData, setFormData] = useState({
@@ -78,14 +80,31 @@ export default function ContactsPage() {
     e.preventDefault();
     
     if (!formData.name || !formData.phone || !formData.relationship) {
-      alert('Please fill in all required fields');
+      showToast({
+        type: 'warning',
+        title: 'Missing Information',
+        message: 'Please fill in all required fields (name, phone, and relationship).',
+        duration: 4000
+      });
       return;
     }
 
     if (editingContact) {
       updateContact(editingContact.id, formData);
+      showToast({
+        type: 'success',
+        title: 'Contact Updated',
+        message: `${formData.name} has been updated successfully.`,
+        duration: 4000
+      });
     } else {
       addContact(formData);
+      showToast({
+        type: 'success',
+        title: 'Contact Added',
+        message: `${formData.name} has been added to your trusted contacts.`,
+        duration: 4000
+      });
     }
 
     setShowAddForm(false);

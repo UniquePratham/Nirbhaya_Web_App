@@ -1,12 +1,71 @@
 'use client';
 
-import React, { useState } from 'react';
-import { AlertTriangle, MapPin, Loader2, Zap, Phone, Heart } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useContacts } from '@/contexts/ContactsContext';
 import { getCurrentLocation } from '@/utils/location';
 import { shareToAllContacts } from '@/utils/whatsapp';
+import { useToast } from '@/components/ui/toast';
 import { cn } from '@/lib/utils';
+import { AlertTriangle, Zap } from 'lucide-react';
+import SOSModal from '@/components/ui/SOSModal';
+
+// Platform detection
+const detectPlatform = () => {
+  if (typeof window === 'undefined') return 'web';
+  const win = window as Window & { opera?: string; MSStream?: unknown };
+  const ua = (typeof navigator !== 'undefined' && navigator.userAgent) ? navigator.userAgent : (win.opera ?? '');
+  if (/android/i.test(ua)) return 'android';
+  if (/iPad|iPhone|iPod/.test(ua) && !win.MSStream) return 'ios';
+  if (/Windows Phone/.test(ua)) return 'windows-mobile';
+  return 'web';
+};
+
+const sendSMS = async (phoneNumber: string, message: string): Promise<boolean> => {
+  const platform = detectPlatform();
+  if (platform === 'android' || platform === 'ios') {
+    try {
+      if (navigator.share) {
+        await navigator.share({ text: message, title: 'Emergency SOS Alert' });
+        return true;
+      }
+      const smsUrl = `sms:${phoneNumber}?body=${encodeURIComponent(message)}`;
+      window.open(smsUrl, '_blank');
+      return true;
+    } catch (e) {
+      console.error('SMS send failed', e);
+      return false;
+    }
+  }
+  return false;
+};
+
+const playNotificationSound = () => {
+  try {
+    const AudioCtx = (window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext);
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.setValueAtTime(900, ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(400, ctx.currentTime + 0.6);
+    gain.gain.setValueAtTime(0.25, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 1);
+    if ('Notification' in window && Notification.permission === 'granted') {
+      new Notification('🚨 Emergency SOS Activated!', {
+        body: 'Emergency alert is being sent to your trusted contacts.',
+        tag: 'sos-alert',
+      });
+    }
+    if ('vibrate' in navigator) navigator.vibrate?.([200, 100, 200]);
+  } catch (e) {
+    console.error('playNotificationSound error', e);
+  }
+};
 
 interface SOSButtonProps {
   className?: string;
@@ -14,237 +73,265 @@ interface SOSButtonProps {
 
 const SOSButton: React.FC<SOSButtonProps> = ({ className = '' }) => {
   const [isLoading, setIsLoading] = useState(false);
-  const [showAlert, setShowAlert] = useState(false);
-  const [ripples, setRipples] = useState<{ id: number; x: number; y: number }[]>([]);
+  const [showModal, setShowModal] = useState(false);
+  const [countdown, setCountdown] = useState<number | null>(null);
+  const [isHovered, setIsHovered] = useState(false);
+  const countdownRef = useRef<number | null>(null);
+
   const { user } = useAuth();
   const { getEmergencyContacts } = useContacts();
+  const { showToast } = useToast();
 
-  const createRipple = (event: React.MouseEvent<HTMLButtonElement>) => {
-    const button = event.currentTarget;
-    const rect = button.getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    const y = event.clientY - rect.top;
-    
-    const newRipple = {
-      id: Date.now(),
-      x,
-      y,
-    };
-    
-    setRipples(prev => [...prev, newRipple]);
-    
-    setTimeout(() => {
-      setRipples(prev => prev.filter(ripple => ripple.id !== newRipple.id));
+  const startCountdown = () => {
+    setCountdown(5);
+    const id = window.setInterval(() => {
+      setCountdown((prev) => {
+        if (prev === null || prev <= 1) {
+          if (countdownRef.current) {
+            clearInterval(countdownRef.current);
+            countdownRef.current = null;
+          }
+          executeSOS().catch(() => {});
+          return null;
+        }
+        return prev - 1;
+      });
     }, 1000);
+    countdownRef.current = id;
   };
 
-  const handleSOS = async (event: React.MouseEvent<HTMLButtonElement>) => {
-    createRipple(event);
-    
+  const cancelCountdown = () => {
+    if (countdownRef.current) {
+      clearInterval(countdownRef.current);
+      countdownRef.current = null;
+    }
+    setCountdown(null);
+    showToast({ 
+      type: 'info', 
+      title: 'SOS Cancelled', 
+      message: 'Emergency alert has been cancelled.', 
+      duration: 3000 
+    });
+  };
+
+  const executeSOS = async () => {
     if (!user) {
-      alert('Please log in to use SOS feature');
+      showToast({ 
+        type: 'warning', 
+        title: 'Authentication Required', 
+        message: 'Please log in to use the SOS feature.', 
+        duration: 4000 
+      });
       return;
     }
 
     setIsLoading(true);
-    setShowAlert(true);
-
     try {
-      // Get current location
-      const location = await getCurrentLocation();
-      
-      // Get emergency contacts
-      const emergencyContacts = getEmergencyContacts();
-      
-      if (emergencyContacts.length === 0) {
-        alert('No emergency contacts found. Please add trusted contacts first.');
+      playNotificationSound();
+      const location = await getCurrentLocation().catch(() => null);
+      const emergencyContacts = getEmergencyContacts ? getEmergencyContacts() : [];
+
+      if (!emergencyContacts || emergencyContacts.length === 0) {
+        showToast({ 
+          type: 'warning', 
+          title: 'No Emergency Contacts', 
+          message: 'Please add trusted contacts first to use the SOS feature.', 
+          duration: 5000 
+        });
+        setIsLoading(false);
         return;
       }
 
-      // Share SOS alert
-      shareToAllContacts(user, location, emergencyContacts);
-      
-      // Show success message with beautiful notification
-      setTimeout(() => {
-        setShowAlert(false);
-        // Custom success notification
-        const successDiv = document.createElement('div');
-        successDiv.className = 'fixed top-4 left-1/2 transform -translate-x-1/2 z-[100] bg-gradient-to-r from-emerald-500 to-green-600 text-white px-6 py-4 rounded-2xl shadow-2xl backdrop-blur-md border border-white/20 font-semibold animate-pulse';
-        successDiv.innerHTML = `
-          <div class="flex items-center space-x-2">
-            <div class="w-2 h-2 bg-white rounded-full animate-ping"></div>
-            <span>🚨 SOS alert sent to ${emergencyContacts.length} contacts!</span>
-          </div>
-        `;
-        document.body.appendChild(successDiv);
-        
-        setTimeout(() => {
-          document.body.removeChild(successDiv);
-        }, 4000);
-      }, 2000);
+      const emergencyMessage = `🚨 EMERGENCY SOS ALERT 🚨
+${user.name} needs immediate help!
 
-    } catch (error) {
-      console.error('SOS Error:', error);
-      setShowAlert(false);
-      
-      // Custom error notification
-      const errorDiv = document.createElement('div');
-      errorDiv.className = 'fixed top-4 left-1/2 transform -translate-x-1/2 z-[100] bg-gradient-to-r from-red-500 to-red-600 text-white px-6 py-4 rounded-2xl shadow-2xl backdrop-blur-md border border-white/20 font-semibold';
-      errorDiv.innerHTML = `
-        <div class="flex items-center space-x-2">
-          <AlertTriangle className="w-4 h-4" />
-          <span>Failed to send SOS alert. Please try again.</span>
-        </div>
-      `;
-      document.body.appendChild(errorDiv);
-      
+Location: ${location ? `https://maps.google.com/maps?q=${location.latitude},${location.longitude}` : 'Location unavailable'}
+Time: ${new Date().toLocaleString()}
+Blood Group: ${user.bloodGroup || 'Unknown'}
+
+This is an automated emergency alert from Nirbhaya Safety App. Please contact ${user.name} immediately or call emergency services.
+#Emergency #SOS #NirbhayaApp`;
+
+      const platform = detectPlatform();
+      let smsSuccessCount = 0;
+      let whatsappSuccessCount = 0;
+
+      for (const contact of emergencyContacts) {
+        try {
+          if (platform === 'android' || platform === 'ios') {
+            const smsSuccess = await sendSMS(contact.phone, emergencyMessage);
+            if (smsSuccess) smsSuccessCount++;
+          }
+          whatsappSuccessCount++;
+        } catch (e) {
+          console.error(`Failed to send to ${contact.name}`, e);
+        }
+      }
+
+      if (location) {
+        shareToAllContacts(user, location, emergencyContacts);
+      } else {
+        shareToAllContacts(user, { latitude: 0, longitude: 0 }, emergencyContacts);
+      }
+
+      const platformMessage = platform === 'android' || platform === 'ios'
+        ? `SMS sent to ${smsSuccessCount} contacts, WhatsApp alerts sent to ${whatsappSuccessCount} contacts.`
+        : `WhatsApp alerts sent to ${whatsappSuccessCount} contacts. SMS not available on desktop.`;
+
+      showToast({ 
+        type: 'success', 
+        title: '🚨 Emergency SOS Sent!', 
+        message: `Emergency alert dispatched! ${platformMessage} Your location has been shared.`, 
+        duration: 10000 
+      });
+
+      // Close modal after success
       setTimeout(() => {
-        document.body.removeChild(errorDiv);
-      }, 3000);
+        setShowModal(false);
+      }, 2000);
+    } catch (e) {
+      console.error('SOS Error:', e);
+      showToast({ 
+        type: 'error', 
+        title: 'SOS Failed', 
+        message: 'Unable to send emergency alert. Please try again or contact emergency services directly.', 
+        duration: 8000 
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
+  const handleModalActivateSOS = async () => {
+    startCountdown();
+  };
+
   return (
-    <div className={cn("relative group", className)}>
-      {/* Outer glow rings */}
-      <div className="absolute inset-0 rounded-full bg-gradient-to-r from-red-400 to-red-600 opacity-20 animate-ping" 
-           style={{ animationDuration: '2s' }} />
-      <div className="absolute inset-0 rounded-full bg-gradient-to-r from-red-400 to-red-600 opacity-10 animate-ping" 
-           style={{ animationDuration: '3s', animationDelay: '1s' }} />
-      
-      {/* Main SOS Button */}
-      <button
-        onClick={handleSOS}
-        disabled={isLoading}
+    <>
+      {/* Fixed Position SOS Button - Bottom Right */}
+      <div 
         className={cn(
-          // Size and shape
-          "relative w-24 h-24 rounded-full",
-          // Background and styling
-          "bg-gradient-to-br from-red-500 via-red-600 to-red-700",
-          "border-4 border-white/90 shadow-2xl",
-          // Hover and focus states
-          "hover:from-red-600 hover:via-red-700 hover:to-red-800",
-          "focus:outline-none focus:ring-4 focus:ring-red-500/50",
-          // Transitions and animations
-          "transition-all duration-300 ease-out transform",
-          "hover:scale-110 active:scale-105",
-          // Special effects
-          "before:absolute before:inset-0 before:rounded-full",
-          "before:bg-gradient-to-br before:from-white/20 before:via-transparent before:to-transparent",
-          "after:absolute after:inset-2 after:rounded-full",
-          "after:bg-gradient-to-br after:from-transparent after:via-transparent after:to-black/10",
-          // Disabled state
-          isLoading && "opacity-75 cursor-not-allowed scale-105",
-          // Alert state
-          showAlert && "animate-pulse shadow-red-500/70"
+          "fixed bottom-6 right-6 z-50 group",
+          "sm:bottom-8 sm:right-8",
+          "lg:bottom-10 lg:right-10",
+          className
         )}
-        style={{
-          boxShadow: `
-            0 0 30px rgba(239, 68, 68, 0.6),
-            0 8px 32px rgba(0, 0, 0, 0.3),
-            inset 0 1px 0 rgba(255, 255, 255, 0.3),
-            inset 0 -1px 0 rgba(0, 0, 0, 0.1)
-          `,
-          background: isLoading 
-            ? 'conic-gradient(from 0deg, #ef4444, #dc2626, #b91c1c, #ef4444)' 
-            : undefined
-        }}
       >
-        {/* Button Content */}
-        <div className="relative z-10 flex flex-col items-center justify-center h-full text-white">
-          {isLoading ? (
-            <div className="relative">
-              <Loader2 className="w-8 h-8 animate-spin" />
-              <div className="absolute inset-0 w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin" 
-                   style={{ animationDirection: 'reverse', animationDuration: '1.5s' }} />
-            </div>
-          ) : (
-            <>
-              <div className="relative">
-                <AlertTriangle className="w-8 h-8 drop-shadow-lg" strokeWidth={2.5} />
-                <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-300 rounded-full animate-pulse" />
-              </div>
-              <span className="text-xs font-black tracking-wider mt-1 drop-shadow-sm">
-                SOS
-              </span>
-            </>
+        {/* Outer Glow Rings */}
+        <div className="absolute inset-0 rounded-full opacity-30 animate-ping" 
+             style={{ 
+               background: 'linear-gradient(135deg, var(--primary), var(--accent))',
+               animationDuration: '2s' 
+             }} 
+        />
+        <div className="absolute inset-0 rounded-full opacity-20 animate-ping" 
+             style={{ 
+               background: 'linear-gradient(135deg, var(--accent), var(--secondary-dark))',
+               animationDuration: '3s',
+               animationDelay: '1s' 
+             }} 
+        />
+
+        {/* Main SOS Button */}
+        <button
+          onClick={() => setShowModal(true)}
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+          className={cn(
+            "relative w-16 h-16 sm:w-20 sm:h-20 rounded-full",
+            "border-4 border-white shadow-2xl",
+            "focus:outline-none focus:ring-4 transition-all duration-300 ease-out",
+            "hover:scale-110 active:scale-105 transform",
+            "backdrop-blur-xl"
           )}
-        </div>
-        
-        {/* Ripple effects */}
-        {ripples.map((ripple) => (
-          <span
-            key={ripple.id}
-            className="absolute inset-0 rounded-full bg-white/30 animate-ping pointer-events-none"
-            style={{
-              left: ripple.x - 12,
-              top: ripple.y - 12,
-              width: 24,
-              height: 24,
-              animationDuration: '1s'
+          style={{
+              background: `linear-gradient(135deg, var(--primary) 0%, var(--accent) 50%, var(--secondary-dark) 100%)`,
+              boxShadow: `
+                0 0 30px rgba(197, 108, 161, 0.6),
+                0 8px 32px rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.3),
+                inset 0 -1px 0 rgba(0, 0, 0, 0.1)
+              `,
+              outlineColor: 'var(--primary)'
             }}
-          />
-        ))}
-      </button>
-      
-      {/* Status Alert Popup */}
-      {showAlert && (
-        <div className="absolute -top-20 left-1/2 transform -translate-x-1/2 z-50 animate-bounce">
-          <div className="bg-gradient-to-r from-red-500 to-red-600 text-white px-4 py-2 rounded-2xl shadow-2xl backdrop-blur-md border border-white/20">
-            <div className="flex items-center space-x-2">
-              <div className="flex space-x-1">
-                <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
-                <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" style={{ animationDelay: '0.2s' }} />
-                <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" style={{ animationDelay: '0.4s' }} />
+        >
+          {/* Button Content */}
+          <div className="relative z-10 flex flex-col items-center justify-center h-full text-white">
+            {/* Clear SOS Emergency Icon */}
+            <div className="relative">
+              {/* Main Alert Triangle */}
+              <AlertTriangle 
+                size={isHovered ? 32 : 28} 
+                className="drop-shadow-2xl transition-all duration-300 animate-pulse"
+                strokeWidth={3}
+                fill="currentColor"
+                stroke="white"
+              />
+              {/* Exclamation point for extra emphasis */}
+              <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                <div className="w-1 h-3 bg-white rounded-full mb-0.5 animate-pulse" />
+                <div className="w-1 h-1 bg-white rounded-full animate-pulse" style={{ animationDelay: '0.5s' }} />
               </div>
-              <span className="text-sm font-semibold">Sending SOS Alert...</span>
-              <Zap className="w-4 h-4 animate-pulse" />
+              {/* Flashing danger indicator */}
+              <div className="absolute -top-1 -right-1">
+                <Zap className="w-3 h-3 text-yellow-300 animate-bounce" fill="currentColor" />
+              </div>
+            </div>
+            {/* Bold SOS Text */}
+            <div className="mt-1 text-xs font-black tracking-wider">
+              SOS
             </div>
           </div>
+
+          {/* Hover Pulse Effect */}
+          {isHovered && (
+            <div 
+              className="absolute inset-0 rounded-full animate-pulse opacity-40"
+              style={{ background: 'var(--primary)' }}
+            />
+          )}
+        </button>
+
+        {/* Floating Label */}
+        <div className={cn(
+          "absolute -top-12 left-1/2 transform -translate-x-1/2",
+          "bg-white/95 backdrop-blur-md rounded-xl px-3 py-1 shadow-lg",
+          "border transition-all duration-300",
+          isHovered ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
+        )} style={{ borderColor: 'var(--border-light)' }}>
+          <p className="text-xs font-bold whitespace-nowrap" style={{ color: 'var(--text-primary)' }}>
+            Emergency SOS
+          </p>
+          <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-white/95" />
         </div>
-      )}
-      
-      {/* Button Labels */}
-      <div className="absolute -bottom-20 left-1/2 transform -translate-x-1/2 text-center">
-        <div className="bg-white/90 backdrop-blur-md px-4 py-2 rounded-2xl shadow-lg border border-white/20">
-          <p className="text-sm font-bold text-red-600 mb-1">Emergency SOS</p>
-          <p className="text-xs text-gray-600">Tap to alert contacts</p>
-          <div className="flex items-center justify-center space-x-2 mt-2">
-            <div className="flex items-center space-x-1">
-              <Phone className="w-3 h-3 text-blue-500" />
-              <span className="text-xs text-gray-500">Call</span>
-            </div>
-            <div className="w-1 h-1 bg-gray-300 rounded-full" />
-            <div className="flex items-center space-x-1">
-              <MapPin className="w-3 h-3 text-green-500" />
-              <span className="text-xs text-gray-500">Location</span>
-            </div>
-            <div className="w-1 h-1 bg-gray-300 rounded-full" />
-            <div className="flex items-center space-x-1">
-              <Heart className="w-3 h-3 text-red-500" />
-              <span className="text-xs text-gray-500">Contacts</span>
-            </div>
-          </div>
+
+        {/* Floating particles effect */}
+        <div className="absolute inset-0 pointer-events-none">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div
+              key={i}
+              className="absolute w-1 h-1 rounded-full animate-float opacity-60"
+              style={{
+                background: 'var(--accent)',
+                left: `${20 + Math.random() * 60}%`,
+                top: `${20 + Math.random() * 60}%`,
+                animation: `float 3s ease-in-out infinite ${i * 0.7}s`
+              }}
+            />
+          ))}
         </div>
       </div>
-      
-      {/* Floating particles effect */}
-      <div className="absolute inset-0 pointer-events-none">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div
-            key={i}
-            className="absolute w-1 h-1 bg-red-300 rounded-full opacity-60"
-            style={{
-              left: `${20 + Math.random() * 60}%`,
-              top: `${20 + Math.random() * 60}%`,
-              animation: `float 3s ease-in-out infinite ${i * 0.5}s`
-            }}
-          />
-        ))}
-      </div>
-    </div>
+
+      {/* SOS Modal */}
+      <SOSModal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        onActivateSOS={handleModalActivateSOS}
+        isLoading={isLoading}
+        countdown={countdown}
+        onCancelCountdown={cancelCountdown}
+      />
+    </>
   );
 };
 

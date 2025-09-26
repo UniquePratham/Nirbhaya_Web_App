@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "../../public/globals.css";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ContactsProvider } from "@/contexts/ContactsContext";
+import { ToastProvider } from "@/components/ui/toast";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -35,11 +36,13 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       </head>
       <body className={`${inter.variable} font-sans antialiased`}>
-        <AuthProvider>
-          <ContactsProvider>
-            {children}
-          </ContactsProvider>
-        </AuthProvider>
+        <ToastProvider>
+          <AuthProvider>
+            <ContactsProvider>
+              {children}
+            </ContactsProvider>
+          </AuthProvider>
+        </ToastProvider>
       </body>
     </html>
   );
